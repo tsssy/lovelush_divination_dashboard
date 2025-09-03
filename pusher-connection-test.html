@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pusher Connection Test</title>
+    <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .connecting { background-color: #fff3cd; color: #856404; }
+        .connected { background-color: #d4edda; color: #155724; }
+        .failed { background-color: #f8d7da; color: #721c24; }
+        .disconnected { background-color: #e2e3e5; color: #383d41; }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <h1>Pusher Connection Test</h1>
+    <p>Testing different Pusher configuration combinations for <strong>lovetapoversea.xyz</strong></p>
+
+    <!-- Test 1: Full Configuration with Paths -->
+    <div class="test-container">
+        <h2>Test 1: Full Configuration (No Cluster for Soketi)</h2>
+        <div id="status1" class="status disconnected">Not started</div>
+        <button onclick="runTest1()">Start Test 1</button>
+        <button onclick="stopTest1()">Stop Test 1</button>
+        <pre id="config1"></pre>
+        <pre id="log1"></pre>
+    </div>
+
+    <!-- Test 2: Without Paths -->
+    <div class="test-container">
+        <h2>Test 2: Without wsPath/wssPath (No Cluster)</h2>
+        <div id="status2" class="status disconnected">Not started</div>
+        <button onclick="runTest2()">Start Test 2</button>
+        <button onclick="stopTest2()">Stop Test 2</button>
+        <pre id="config2"></pre>
+        <pre id="log2"></pre>
+    </div>
+
+    <!-- Test 3: Different Cluster -->
+    <div class="test-container">
+        <h2>Test 3: Different Cluster (eu)</h2>
+        <div id="status3" class="status disconnected">Not started</div>
+        <button onclick="runTest3()">Start Test 3</button>
+        <button onclick="stopTest3()">Stop Test 3</button>
+        <pre id="config3"></pre>
+        <pre id="log3"></pre>
+    </div>
+
+    <!-- Test 4: Force HTTP (no TLS) -->
+    <div class="test-container">
+        <h2>Test 4: HTTP Only (forceTLS: false, No Cluster)</h2>
+        <div id="status4" class="status disconnected">Not started</div>
+        <button onclick="runTest4()">Start Test 4</button>
+        <button onclick="stopTest4()">Stop Test 4</button>
+        <pre id="config4"></pre>
+        <pre id="log4"></pre>
+    </div>
+
+    <!-- Test 5: Different Port -->
+    <div class="test-container">
+        <h2>Test 5: Port 6001 (Soketi Default, No Cluster)</h2>
+        <div id="status5" class="status disconnected">Not started</div>
+        <button onclick="runTest5()">Start Test 5</button>
+        <button onclick="stopTest5()">Stop Test 5</button>
+        <pre id="config5"></pre>
+        <pre id="log5"></pre>
+    </div>
+
+    <!-- Test 6: IP Address with Port 443 -->
+    <div class="test-container">
+        <h2>Test 6: IP Address (8.216.32.239:443)</h2>
+        <div id="status6" class="status disconnected">Not started</div>
+        <button onclick="runTest6()">Start Test 6</button>
+        <button onclick="stopTest6()">Stop Test 6</button>
+        <pre id="config6"></pre>
+        <pre id="log6"></pre>
+    </div>
+
+    <!-- Test 7: IP Address with Port 80 (HTTP) -->
+    <div class="test-container">
+        <h2>Test 7: IP Address (8.216.32.239:80)</h2>
+        <div id="status7" class="status disconnected">Not started</div>
+        <button onclick="runTest7()">Start Test 7</button>
+        <button onclick="stopTest7()">Stop Test 7</button>
+        <pre id="config7"></pre>
+        <pre id="log7"></pre>
+    </div>
+
+    <script>
+        let pusherInstances = {};
+
+        function log(testNum, message) {
+            const logElement = document.getElementById(`log${testNum}`);
+            const timestamp = new Date().toISOString().substr(11, 12);
+            logElement.textContent += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function setStatus(testNum, status, message) {
+            const statusElement = document.getElementById(`status${testNum}`);
+            statusElement.className = `status ${status}`;
+            statusElement.textContent = message;
+        }
+
+        function showConfig(testNum, config) {
+            const configElement = document.getElementById(`config${testNum}`);
+            configElement.textContent = `Configuration:\n${JSON.stringify(config, null, 2)}`;
+        }
+
+        function setupPusherEvents(pusher, testNum) {
+            pusher.connection.bind('connecting', () => {
+                setStatus(testNum, 'connecting', 'Connecting...');
+                log(testNum, 'Connection state: connecting');
+            });
+
+            pusher.connection.bind('connected', () => {
+                setStatus(testNum, 'connected', `Connected (Socket ID: ${pusher.connection.socket_id})`);
+                log(testNum, `Connected! Socket ID: ${pusher.connection.socket_id}`);
+            });
+
+            pusher.connection.bind('disconnected', () => {
+                setStatus(testNum, 'disconnected', 'Disconnected');
+                log(testNum, 'Connection state: disconnected');
+            });
+
+            pusher.connection.bind('failed', () => {
+                setStatus(testNum, 'failed', 'Connection failed');
+                log(testNum, 'Connection state: failed');
+            });
+
+            pusher.connection.bind('error', (err) => {
+                setStatus(testNum, 'failed', `Error: ${err.error || err.type || 'Unknown'}`);
+                log(testNum, `Connection error: ${JSON.stringify(err)}`);
+            });
+
+            pusher.connection.bind('state_change', (states) => {
+                log(testNum, `State change: ${states.previous} -> ${states.current}`);
+            });
+        }
+
+        // Test 1: Full Configuration (with wsPath/wssPath) - No Cluster
+        function runTest1() {
+            const config = {
+                wsHost: "lovetapoversea.xyz",
+                wsPort: 80,
+                wssPort: 443,
+                forceTLS: true,
+                wsPath: "/ws",
+                wssPath: "/ws",
+                disableStats: true,
+                // Remove cluster for Soketi
+                enabledTransports: ['ws', 'wss']
+            };
+            
+            showConfig(1, config);
+            log(1, "Starting Test 1: Full Configuration (No Cluster)");
+            
+            pusherInstances[1] = new Pusher("53d7969464ff4606bd10efb8d8f074fa", config);
+            setupPusherEvents(pusherInstances[1], 1);
+        }
+
+        function stopTest1() {
+            if (pusherInstances[1]) {
+                pusherInstances[1].disconnect();
+                delete pusherInstances[1];
+                setStatus(1, 'disconnected', 'Stopped');
+                log(1, "Test 1 stopped");
+            }
+        }
+
+        // Test 2: Without wsPath/wssPath - No Cluster
+        function runTest2() {
+            const config = {
+                wsHost: "lovetapoversea.xyz",
+                wsPort: 80,
+                wssPort: 443,
+                forceTLS: true,
+                disableStats: true,
+                enabledTransports: ['ws', 'wss']
+            };
+            
+            showConfig(2, config);
+            log(2, "Starting Test 2: Without wsPath/wssPath (No Cluster)");
+            
+            pusherInstances[2] = new Pusher("53d7969464ff4606bd10efb8d8f074fa", config);
+            setupPusherEvents(pusherInstances[2], 2);
+        }
+
+        function stopTest2() {
+            if (pusherInstances[2]) {
+                pusherInstances[2].disconnect();
+                delete pusherInstances[2];
+                setStatus(2, 'disconnected', 'Stopped');
+                log(2, "Test 2 stopped");
+            }
+        }
+
+        // Test 3: Different Cluster
+        function runTest3() {
+            const config = {
+                wsHost: "lovetapoversea.xyz",
+                wsPort: 80,
+                wssPort: 443,
+                forceTLS: true,
+                cluster: "eu",  // Try different cluster
+                wsPath: "/ws",
+                wssPath: "/ws",
+                disableStats: true,
+                enabledTransports: ['ws', 'wss']
+            };
+            
+            showConfig(3, config);
+            log(3, "Starting Test 3: Different Cluster (eu)");
+            
+            pusherInstances[3] = new Pusher("53d7969464ff4606bd10efb8d8f074fa", config);
+            setupPusherEvents(pusherInstances[3], 3);
+        }
+
+        function stopTest3() {
+            if (pusherInstances[3]) {
+                pusherInstances[3].disconnect();
+                delete pusherInstances[3];
+                setStatus(3, 'disconnected', 'Stopped');
+                log(3, "Test 3 stopped");
+            }
+        }
+
+        // Test 4: HTTP Only (forceTLS: false) - No Cluster
+        function runTest4() {
+            const config = {
+                wsHost: "lovetapoversea.xyz",
+                wsPort: 80,
+                wssPort: 443,
+                forceTLS: false,
+                wsPath: "/ws",
+                wssPath: "/ws",
+                disableStats: true,
+                enabledTransports: ['ws', 'wss']
+            };
+            
+            showConfig(4, config);
+            log(4, "Starting Test 4: HTTP Only (forceTLS: false, No Cluster)");
+            
+            pusherInstances[4] = new Pusher("53d7969464ff4606bd10efb8d8f074fa", config);
+            setupPusherEvents(pusherInstances[4], 4);
+        }
+
+        function stopTest4() {
+            if (pusherInstances[4]) {
+                pusherInstances[4].disconnect();
+                delete pusherInstances[4];
+                setStatus(4, 'disconnected', 'Stopped');
+                log(4, "Test 4 stopped");
+            }
+        }
+
+        // Test 5: Port 6001 (Soketi Default) - No Cluster
+        function runTest5() {
+            const config = {
+                wsHost: "lovetapoversea.xyz",
+                wsPort: 6001,
+                wssPort: 6001,
+                forceTLS: true,
+                wsPath: "/ws",
+                wssPath: "/ws",
+                disableStats: true,
+                enabledTransports: ['ws', 'wss']
+            };
+            
+            showConfig(5, config);
+            log(5, "Starting Test 5: Port 6001 (Soketi Default, No Cluster)");
+            
+            pusherInstances[5] = new Pusher("53d7969464ff4606bd10efb8d8f074fa", config);
+            setupPusherEvents(pusherInstances[5], 5);
+        }
+
+        function stopTest5() {
+            if (pusherInstances[5]) {
+                pusherInstances[5].disconnect();
+                delete pusherInstances[5];
+                setStatus(5, 'disconnected', 'Stopped');
+                log(5, "Test 5 stopped");
+            }
+        }
+
+        // Test 6: IP Address (8.216.32.239:443) - No Cluster
+        function runTest6() {
+            const config = {
+                wsHost: "8.216.32.239",
+                wsPort: 80,
+                wssPort: 443,
+                forceTLS: true,
+                wsPath: "/ws",
+                wssPath: "/ws",
+                disableStats: true,
+                enabledTransports: ['ws', 'wss']
+            };
+            
+            showConfig(6, config);
+            log(6, "Starting Test 6: IP Address (8.216.32.239:443, No Cluster)");
+            
+            pusherInstances[6] = new Pusher("53d7969464ff4606bd10efb8d8f074fa", config);
+            setupPusherEvents(pusherInstances[6], 6);
+        }
+
+        function stopTest6() {
+            if (pusherInstances[6]) {
+                pusherInstances[6].disconnect();
+                delete pusherInstances[6];
+                setStatus(6, 'disconnected', 'Stopped');
+                log(6, "Test 6 stopped");
+            }
+        }
+
+        // Test 7: IP Address (8.216.32.239:80) - HTTP Only
+        function runTest7() {
+            const config = {
+                wsHost: "8.216.32.239",
+                wsPort: 80,
+                wssPort: 80,
+                forceTLS: false,
+                wsPath: "/ws",
+                wssPath: "/ws",
+                disableStats: true,
+                enabledTransports: ['ws', 'wss']
+            };
+            
+            showConfig(7, config);
+            log(7, "Starting Test 7: IP Address (8.216.32.239:80, HTTP Only)");
+            
+            pusherInstances[7] = new Pusher("53d7969464ff4606bd10efb8d8f074fa", config);
+            setupPusherEvents(pusherInstances[7], 7);
+        }
+
+        function stopTest7() {
+            if (pusherInstances[7]) {
+                pusherInstances[7].disconnect();
+                delete pusherInstances[7];
+                setStatus(7, 'disconnected', 'Stopped');
+                log(7, "Test 7 stopped");
+            }
+        }
+
+        // Stop all tests on page unload
+        window.addEventListener('beforeunload', () => {
+            for (let i = 1; i <= 7; i++) {
+                if (pusherInstances[i]) {
+                    pusherInstances[i].disconnect();
+                }
+            }
+        });
+
+        // Auto-start Test 1 for immediate testing
+        setTimeout(() => {
+            runTest1();
+        }, 1000);
+    </script>
+</body>
+</html>

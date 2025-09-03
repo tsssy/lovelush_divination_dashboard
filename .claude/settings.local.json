@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build:*)",
+      "Read(/Users/danielyu/Library/Containers/com.tencent.xinWeChat/Data/Library/Application Support/com.tencent.xinWeChat/2.0b4.0.9/55430d358d419c8da2c4102b55ca5334/Message/MessageTemp/c4f5607dacd1289fb342b090b2a1d956/File/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

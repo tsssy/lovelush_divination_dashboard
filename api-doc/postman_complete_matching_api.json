@@ -1,0 +1,543 @@
+{
+  "info": {
+    "name": "Complete Matching API with Paid Support",
+    "description": "Full API collection for testing matching system with both free and paid matches",
+    "version": "3.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "User Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.access_token) {",
+                  "        pm.environment.set('user_access_token', response.data.access_token);",
+                  "        pm.environment.set('user_id', response.data.user.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "user",
+                  "description": "User username"
+                },
+                {
+                  "key": "password",
+                  "value": "stringst",
+                  "description": "User password"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Login user and get access token for matching requests"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Free vs Paid Matching Flow",
+      "item": [
+        {
+          "name": "1. First Time Match (Free)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const jsonData = pm.response.json();",
+                  "",
+                  "if (jsonData.data.candidates.length > 0) {",
+                  "    pm.test('Initial match: Returns 5 candidates', function () {",
+                  "        pm.expect(jsonData.data.candidates).to.have.lengthOf(5);",
+                  "    });",
+                  "    ",
+                  "    pm.test('Initial match: Credits consumed is 0 (free)', function () {",
+                  "        pm.expect(jsonData.data.credits_consumed).to.equal(0);",
+                  "    });",
+                  "    ",
+                  "    pm.test('Initial match: Has no remaining free matches', function () {",
+                  "        pm.expect(jsonData.data.has_remaining_matches).to.be.false;",
+                  "    });",
+                  "    ",
+                  "    console.log('✅ First match detected - got 5 candidates for free');",
+                  "} else {",
+                  "    console.log('⚠️ User has already used their free match');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"use_paid_match\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/matching/matches",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "matching", "matches"]
+            },
+            "description": "First match request - should return 5 candidates for free (if user hasn't matched before)"
+          },
+          "response": []
+        },
+        {
+          "name": "2. Status Check (After Free Match Used)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const jsonData = pm.response.json();",
+                  "",
+                  "pm.test('Returns 0 candidates (free match already used)', function () {",
+                  "    pm.expect(jsonData.data.candidates).to.have.lengthOf(0);",
+                  "});",
+                  "",
+                  "pm.test('Credits consumed is 0 (just checking status)', function () {",
+                  "    pm.expect(jsonData.data.credits_consumed).to.equal(0);",
+                  "});",
+                  "",
+                  "pm.test('Has no remaining free matches', function () {",
+                  "    pm.expect(jsonData.data.has_remaining_matches).to.be.false;",
+                  "});",
+                  "",
+                  "console.log('✅ Status check works - no new matches without payment');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"use_paid_match\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/matching/matches",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "matching", "matches"]
+            },
+            "description": "Status check after free match is used - should return 0 candidates"
+          },
+          "response": []
+        },
+        {
+          "name": "3. Paid Match Without Credits",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const jsonData = pm.response.json();",
+                  "",
+                  "pm.test('Returns 0 candidates (insufficient credits)', function () {",
+                  "    pm.expect(jsonData.data.candidates).to.have.lengthOf(0);",
+                  "});",
+                  "",
+                  "pm.test('Credits consumed is 0 (insufficient balance)', function () {",
+                  "    pm.expect(jsonData.data.credits_consumed).to.equal(0);",
+                  "});",
+                  "",
+                  "pm.test('Remaining credits is 0', function () {",
+                  "    pm.expect(jsonData.data.remaining_credits).to.equal(0);",
+                  "});",
+                  "",
+                  "console.log('✅ Paid match correctly blocked - insufficient credits');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"use_paid_match\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/matching/matches",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "matching", "matches"]
+            },
+            "description": "Try paid match without credits - should return 0 candidates"
+          },
+          "response": []
+        },
+        {
+          "name": "4. Paid Match With Credits (Simulation)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const jsonData = pm.response.json();",
+                  "",
+                  "// This test simulates what would happen if user had credits",
+                  "// In real scenario with credits, this would return 5 candidates",
+                  "console.log('💰 SIMULATION: If user had 10+ credits:');",
+                  "console.log('   - Would return 5 new candidates');",
+                  "console.log('   - Would consume 10 credits');",
+                  "console.log('   - Would store paid match record');",
+                  "console.log('   - Response: has_remaining_matches: false');",
+                  "",
+                  "console.log('🔍 Actual response (no credits):', JSON.stringify(jsonData.data, null, 2));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"use_paid_match\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/matching/matches",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "matching", "matches"]
+            },
+            "description": "Paid match attempt - demonstrates behavior with/without credits"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Credits & History",
+      "item": [
+        {
+          "name": "Get User Credits",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const jsonData = pm.response.json();",
+                  "console.log('Credits balance:', jsonData.data.current_balance);",
+                  "",
+                  "pm.test('User has 0 current balance (no purchases)', function () {",
+                  "    pm.expect(jsonData.data.current_balance).to.equal(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/matching/credits",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "matching", "credits"]
+            },
+            "description": "Get user's current credit balance"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Match History",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const jsonData = pm.response.json();",
+                  "const matchCount = jsonData.data.match_history.length;",
+                  "",
+                  "console.log('Total matches in history:', matchCount);",
+                  "",
+                  "if (matchCount > 0) {",
+                  "    // Show match types",
+                  "    jsonData.data.match_history.forEach((match, index) => {",
+                  "        console.log(`Match ${index + 1}: ${match.match_type} (${match.is_free_match ? 'FREE' : 'PAID'}) - ${match.candidates_count} candidates`);",
+                  "    });",
+                  "    ",
+                  "    const freeMatches = jsonData.data.match_history.filter(m => m.is_free_match).length;",
+                  "    const paidMatches = jsonData.data.match_history.filter(m => !m.is_free_match).length;",
+                  "    ",
+                  "    console.log(`Summary: ${freeMatches} free matches, ${paidMatches} paid matches`);",
+                  "} else {",
+                  "    console.log('No match history found');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/matching/matches/history?limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "matching", "matches", "history"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Number of records to retrieve"
+                }
+              ]
+            },
+            "description": "Get match history showing free vs paid matches"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "API Examples & Documentation",
+      "item": [
+        {
+          "name": "📋 Match Request Examples",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "console.log('🚀 COMPLETE MATCHING API EXAMPLES:');",
+                  "console.log('');",
+                  "console.log('📋 REQUEST FORMATS:');",
+                  "console.log('');",
+                  "console.log('1️⃣ FREE MATCH / STATUS CHECK:');",
+                  "console.log('   POST /api/v1/matching/matches');",
+                  "console.log('   {');",
+                  "console.log('     \"user_id\": \"your_user_id\",');",
+                  "console.log('     \"use_paid_match\": false');",
+                  "console.log('   }');",
+                  "console.log('');",
+                  "console.log('2️⃣ PAID MATCH REQUEST:');",
+                  "console.log('   POST /api/v1/matching/matches');",
+                  "console.log('   {');",
+                  "console.log('     \"user_id\": \"your_user_id\",');",
+                  "console.log('     \"use_paid_match\": true');",
+                  "console.log('   }');",
+                  "console.log('');",
+                  "console.log('📊 RESPONSE STRUCTURE:');",
+                  "console.log('   {');",
+                  "console.log('     \"candidates\": [/* 0 or 5 matches */],');",
+                  "console.log('     \"credits_consumed\": 0 | 10,');",
+                  "console.log('     \"remaining_credits\": number,');",
+                  "console.log('     \"has_remaining_matches\": boolean');",
+                  "console.log('   }');",
+                  "console.log('');",
+                  "console.log('🎯 LOGIC FLOW:');",
+                  "console.log('   • First request (use_paid_match: false)');",
+                  "console.log('     → Returns 5 candidates for free');",
+                  "console.log('     → Sets has_remaining_matches: false');",
+                  "console.log('   • Subsequent requests (use_paid_match: false)');",
+                  "console.log('     → Returns 0 candidates (status check)');",
+                  "console.log('   • Paid requests (use_paid_match: true)');",
+                  "console.log('     → If credits >= 10: Returns 5 candidates, consumes 10 credits');",
+                  "console.log('     → If credits < 10: Returns 0 candidates, no consumption');",
+                  "console.log('');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            },
+            "description": "View complete API documentation and examples (check Pre-request Script tab)"
+          },
+          "response": []
+        },
+        {
+          "name": "🔗 Interactive API Docs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/docs",
+              "host": ["{{base_url}}"],
+              "path": ["docs"]
+            },
+            "description": "View the interactive FastAPI documentation"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Chat Creation (After Matching)",
+      "item": [
+        {
+          "name": "Create Chat with Matched Sub-Account",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Set a default sub_account_id for testing",
+                  "if (!pm.environment.get('sub_account_id')) {",
+                  "    pm.environment.set('sub_account_id', '68ac6409c773118b8badf12e');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"sub_account_id\": \"{{sub_account_id}}\",\n  \"chatroom_type\": \"initial_match\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/matching/chat",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "matching", "chat"]
+            },
+            "description": "Create a chatroom with matched sub-account"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// Set base URL if not already set",
+          "if (!pm.environment.get('base_url')) {",
+          "    pm.environment.set('base_url', 'http://localhost:8000');",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    }
+  ]
+}

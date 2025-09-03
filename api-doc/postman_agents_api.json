@@ -1,0 +1,311 @@
+{
+  "info": {
+    "name": "Agents API Collection",
+    "description": "Complete API collection for testing Agent management endpoints",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Agent Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.access_token) {",
+                  "        pm.environment.set('agent_access_token', response.data.access_token);",
+                  "        pm.environment.set('agent_id', response.data.agent.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "agent-1",
+                  "description": "Agent username"
+                },
+                {
+                  "key": "password",
+                  "value": "pswrd123",
+                  "description": "Agent password"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/agents/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "agents", "login"]
+            },
+            "description": "Authenticate agent and get access token"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Sub-Accounts Management",
+      "item": [
+        {
+          "name": "Get All Sub-Accounts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{agent_access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/agents/sub-accounts",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "agents", "sub-accounts"]
+            },
+            "description": "Get all sub-accounts for the authenticated agent"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Sub-Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.id) {",
+                  "        pm.environment.set('sub_account_id', response.data.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{agent_access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"sophia_ai\",\n  \"display_name\": \"Sophia AI Assistant\",\n  \"bio\": \"AI assistant specializing in customer support and general conversations. Friendly, helpful, and knowledgeable.\",\n  \"age\": 25,\n  \"location\": \"Virtual Assistant Hub\",\n  \"gender\": \"female\",\n  \"photo_urls\": [\n    \"https://example.com/photos/sophia_profile.jpg\",\n    \"https://example.com/photos/sophia_casual.jpg\"\n  ],\n  \"tags\": [\n    \"customer-support\",\n    \"friendly\",\n    \"professional\",\n    \"ai-assistant\",\n    \"general-purpose\"\n  ],\n  \"avatar_url\": \"https://example.com/avatars/sophia.png\",\n  \"max_concurrent_chats\": 10\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/agents/sub-accounts",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "agents", "sub-accounts"]
+            },
+            "description": "Create a new sub-account with profile information including age, location, gender, and photos"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Sub-Account by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{agent_access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/agents/sub-accounts/{{sub_account_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "agents", "sub-accounts", "{{sub_account_id}}"]
+            },
+            "description": "Get specific sub-account details by ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Sub-Account",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{agent_access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"display_name\": \"Sophia AI Assistant - Updated\",\n  \"bio\": \"Updated AI assistant specializing in customer support, sales, and technical assistance. Enhanced with new capabilities.\",\n  \"age\": 26,\n  \"location\": \"Global Virtual Assistant Hub\",\n  \"photo_urls\": [\n    \"https://example.com/photos/sophia_profile_new.jpg\",\n    \"https://example.com/photos/sophia_professional.jpg\",\n    \"https://example.com/photos/sophia_casual_updated.jpg\"\n  ],\n  \"tags\": [\n    \"customer-support\",\n    \"sales\",\n    \"technical-support\",\n    \"professional\",\n    \"ai-assistant\",\n    \"enhanced\",\n    \"multilingual\"\n  ],\n  \"max_concurrent_chats\": 15,\n  \"status\": \"available\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/agents/sub-accounts/{{sub_account_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "agents", "sub-accounts", "{{sub_account_id}}"]
+            },
+            "description": "Update sub-account information including profile details"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Sub-Account",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{agent_access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/agents/sub-accounts/{{sub_account_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "agents", "sub-accounts", "{{sub_account_id}}"]
+            },
+            "description": "Delete sub-account (soft delete)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Test Scenarios",
+      "item": [
+        {
+          "name": "Create Multiple Sub-Accounts",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{agent_access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"alex_support\",\n  \"display_name\": \"Alex - Customer Support\",\n  \"bio\": \"Specialized customer support agent with expertise in technical troubleshooting and product information.\",\n  \"age\": 28,\n  \"location\": \"Support Center\",\n  \"gender\": \"male\",\n  \"photo_urls\": [\n    \"https://example.com/photos/alex_professional.jpg\"\n  ],\n  \"tags\": [\n    \"customer-support\",\n    \"technical-support\",\n    \"troubleshooting\",\n    \"product-expert\",\n    \"professional\",\n    \"male-persona\"\n  ],\n  \"avatar_url\": \"https://example.com/avatars/alex.png\",\n  \"max_concurrent_chats\": 8\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/agents/sub-accounts",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "agents", "sub-accounts"]
+            },
+            "description": "Create another sub-account for testing multiple personas"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Gaming Persona",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{agent_access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"gamer_riley\",\n  \"display_name\": \"Riley - Gaming Companion\",\n  \"bio\": \"Passionate gamer and streaming enthusiast. Loves discussing latest games, sharing tips, and having fun conversations.\",\n  \"age\": 22,\n  \"location\": \"Gaming Studio\",\n  \"gender\": \"other\",\n  \"photo_urls\": [\n    \"https://example.com/photos/riley_gaming_setup.jpg\",\n    \"https://example.com/photos/riley_cosplay.jpg\",\n    \"https://example.com/photos/riley_streaming.jpg\"\n  ],\n  \"tags\": [\n    \"gaming\",\n    \"streaming\",\n    \"entertainment\",\n    \"casual\",\n    \"enthusiast\",\n    \"tips-and-tricks\",\n    \"cosplay\",\n    \"non-binary\"\n  ],\n  \"avatar_url\": \"https://example.com/avatars/riley_animated.gif\",\n  \"max_concurrent_chats\": 12\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/agents/sub-accounts",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "agents", "sub-accounts"]
+            },
+            "description": "Create a gaming-focused sub-account persona"
+          },
+          "response": []
+        },
+        {
+          "name": "Test Access Denial (Invalid Sub-Account ID)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{agent_access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/agents/sub-accounts/507f1f77bcf86cd799439011",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "agents", "sub-accounts", "507f1f77bcf86cd799439011"]
+            },
+            "description": "Test accessing a non-existent sub-account (should return 404 or 403)"
+          },
+          "response": []
+        },
+        {
+          "name": "Test Unauthorized Access",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/agents/sub-accounts",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "agents", "sub-accounts"]
+            },
+            "description": "Test accessing sub-accounts without authentication (should return 401)"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// Set base URL if not already set",
+          "if (!pm.environment.get('base_url')) {",
+          "    pm.environment.set('base_url', 'http://localhost:8000');",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    }
+  ]
+}
