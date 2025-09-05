@@ -11,7 +11,7 @@ export const CONFIG = {
   
   // API Configuration
   api: {
-    base_url: 'http://localhost:8000',
+    base_url: 'http://localhost:9000',
     // base_url: 'https://lovetapoversea.xyz/lovelush',
     // base_url: "https://5aec691465f1.ngrok-free.app",
     timeout: 30000,
